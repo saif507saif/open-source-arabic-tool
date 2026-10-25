@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<!--
+  Data Shield Vault (درع البيانات) - Open Source Local Encryption Suite
+  SPDX-License-Identifier: MIT
+  License: Free and Open Source Software (FOSS) - MIT / GPLv3 Compatible
+  Zero-Tracking, 100% Client-Side Web Crypto API (AES-256-GCM + PBKDF2-SHA256)
+-->
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>درع البيانات - أداة تشفير وحماية البيانات المحلية (AES-256-GCM)</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background-color: #0b1120;
+      color: #f1f5f9;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    .tab-active {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+    .mono-box {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      direction: ltr;
+      text-align: left;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-8">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 hidden px-5 py-3 rounded-xl shadow-2xl text-sm font-bold transition-all duration-300 flex items-center gap-2">
+    <span id="toastIcon"></span>
+    <span id="toastMsg"></span>
+  </div>
+
+  <div class="max-w-4xl w-full mx-auto space-y-6">
+    <!-- Header -->
+    <header class="glass-card rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-extrabold text-white">درع البيانات (AES-256-GCM)</h1>
+          <p class="text-xs md:text-sm text-slate-400">منصة تشفير وحماية البيانات والملفات محلياً بالكامل داخل متصفحك دون إرسال أي بيانات للخارج</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs bg-emerald-950/60 border border-emerald-700/50 text-emerald-300 px-3 py-2 rounded-lg shrink-0">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>مفتوح المصدر (MIT FOSS) • Web Crypto & Fedora</span>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="glass-card rounded-xl p-1.5 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5">
+      <button id="tabBtnText" type="button" class="tab-btn tab-active py-2.5 px-3 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2">
+        <span>📝</span>
+        <span>تشفير النصوص</span>
+      </button>
+      <button id="tabBtnFile" type="button" class="tab-btn py-2.5 px-3 rounded-lg text-sm font-bold text-slate-300 hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2">
+        <span>📁</span>
+        <span>تشفير الملفات</span>
+      </button>
+      <button id="tabBtnKeygen" type="button" class="tab-btn py-2.5 px-3 rounded-lg text-sm font-bold text-slate-300 hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2">
+        <span>🔑</span>
+        <span>توليد المفاتيح</span>
+      </button>
+      <button id="tabBtnHash" type="button" class="tab-btn py-2.5 px-3 rounded-lg text-sm font-bold text-slate-300 hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2">
+        <span>🛡️</span>
+        <span>فحص السلامة (Hash)</span>
+      </button>
+      <button id="tabBtnFedora" type="button" class="tab-btn py-2.5 px-3 rounded-lg text-sm font-bold text-slate-300 hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2">
+        <span>🐧</span>
+        <span>فيدورا لينكس (Fedora)</span>
+      </button>
+      <button id="tabBtnOpenSource" type="button" class="tab-btn py-2.5 px-3 rounded-lg text-sm font-bold text-slate-300 hover:bg-slate-800/60 transition-all flex items-center justify-center gap-2">
+        <span>🌍</span>
+        <span>مفتوح المصدر (FOSS)</span>
+      </button>
+    </nav>
+
+    <!-- SECTION 1: Text Encryption & Decryption -->
+    <section id="secText" class="glass-card rounded-2xl p-6 space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white">تشفير وفك تشفير النصوص والرسائل السرية</h2>
+          <p class="text-xs text-slate-400">يتم استخدام معيار AES-256-GCM المعتمد مع ملح عشوائي (Salt) ومتجه ابتدائي (IV) لكل عملية تشفير</p>
+        </div>
+        <button id="btnDemoText" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-600 px-3 py-1.5 rounded-lg transition self-start sm:self-auto">
+          تجربة نص جاهز
+        </button>
+      </div>
+
+      <!-- Mode Switcher -->
+      <div class="flex gap-3">
+        <button id="modeEncBtn" type="button" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 transition">
+          🔒 تشفير نص جديد
+        </button>
+        <button id="modeDecBtn" type="button" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+          🔓 فك تشفير نص مشفر
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label id="lblTextInput" for="txtInput" class="block text-sm font-bold text-slate-200 mb-1.5">النص المراد تشفيره:</label>
+          <textarea id="txtInput" rows="4" placeholder="اكتب أو الصق بياناتك السرية هنا..." class="w-full rounded-xl bg-slate-900/90 border border-slate-700 p-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+        </div>
+
+        <!-- Password Field with Strength Bar -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="txtPassword" class="text-sm font-bold text-slate-200">مفتاح التشفير السري (كلمة المرور):</label>
+            <button id="btnAutoFillKey" type="button" class="text-xs text-emerald-400 hover:underline">توليد مفتاح عشوائي قوي</button>
+          </div>
+          <div class="relative flex items-center">
+            <input id="txtPassword" type="password" placeholder="أدخل كلمة مرور قوية لحماية البيانات..." class="w-full rounded-xl bg-slate-900/90 border border-slate-700 p-3 pl-24 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+            <button id="btnTogglePwd" type="button" class="absolute left-3 text-xs text-slate-400 hover:text-white bg-slate-800 px-2.5 py-1 rounded-md">
+              إظهار
+            </button>
+          </div>
+          <div class="mt-2 flex items-center gap-3">
+            <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div id="pwdStrengthBar" class="h-full w-0 bg-red-500 transition-all duration-300"></div>
+            </div>
+            <span id="pwdStrengthLabel" class="text-xs text-slate-400 min-w-[70px] text-left">غير محدد</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button id="btnProcessText" type="button" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-sm shadow-lg shadow-emerald-950/50 transition flex items-center justify-center gap-2">
+            <span id="btnProcessTextIcon">🔒</span>
+            <span id="btnProcessTextLabel">تنفيذ التشفير الآن (AES-256)</span>
+          </button>
+          <button id="btnClearText" type="button" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition">
+            مسح الحقول
+          </button>
+        </div>
+
+        <!-- Output Area -->
+        <div id="textOutputContainer" class="hidden space-y-2 pt-3 border-t border-slate-700/60">
+          <div class="flex items-center justify-between">
+            <span id="lblTextOutput" class="text-sm font-bold text-emerald-400">النتيجة المشفرة (Base64):</span>
+            <div class="flex gap-2">
+              <button id="btnCopyOutput" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">
+                📋 نسخ النتيجة
+              </button>
+              <button id="btnDownloadTxt" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-600 transition">
+                💾 حفظ كملف
+              </button>
+            </div>
+          </div>
+          <textarea id="txtOutput" readonly rows="4" class="w-full rounded-xl bg-slate-950 border border-emerald-500/40 p-3.5 text-xs text-emerald-300 mono-box focus:outline-none"></textarea>
+          <div id="cryptoMetaInfo" class="grid grid-cols-3 gap-2 text-center text-xs bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+            <div><span class="text-slate-400">الخوارزمية:</span> <strong class="text-slate-200">AES-256-GCM</strong></div>
+            <div><span class="text-slate-400">اشتقاق المفتاح:</span> <strong class="text-slate-200">PBKDF2-SHA256</strong></div>
+            <div><span class="text-slate-400">عدد الدورات:</span> <strong class="text-slate-200">100,000</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: File Encryption & Decryption -->
+    <section id="secFile" class="glass-card rounded-2xl p-6 space-y-5 hidden">
+      <div class="border-b border-slate-700/60 pb-4">
+        <h2 class="text-lg font-bold text-white">تشفير وفك تشفير الملفات والوثائق</h2>
+        <p class="text-xs text-slate-400">قم بتشفير أي ملف (صور، مستندات PDF، أرشيف، قواعد بيانات) إلى صيغة مشفرة <code class="text-emerald-400">.vault</code> واسترجاعه متى شئت</p>
+      </div>
+
+      <div class="space-y-4">
+        <!-- File Dropzone -->
+        <label for="fileInput" class="block border-2 border-dashed border-slate-600 hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-900/40">
+          <input id="fileInput" type="file" class="hidden" />
+          <div class="space-y-2">
+            <div class="text-3xl">📂</div>
+            <p id="fileDropTitle" class="text-sm font-bold text-slate-200">اضغط لاختيار ملف من جهازك</p>
+            <p id="fileDropSub" class="text-xs text-slate-400">تتم المعالجة داخل الذاكرة المحلية للمتصفح بنسبة 100%</p>
+          </div>
+        </label>
+
+        <div>
+          <label for="filePassword" class="block text-sm font-bold text-slate-200 mb-1.5">كلمة مرور تشفير / فك تشفير الملف:</label>
+          <input id="filePassword" type="password" placeholder="أدخل كلمة المرور الخاصة بالملف..." class="w-full rounded-xl bg-slate-900/90 border border-slate-700 p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button id="btnEncryptFile" type="button" class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition flex items-center justify-center gap-2">
+            <span>🔒</span>
+            <span>تشفير الملف وتحميله (.vault)</span>
+          </button>
+          <button id="btnDecryptFile" type="button" class="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition flex items-center justify-center gap-2">
+            <span>🔓</span>
+            <span>فك تشفير الملف واسترجاعه</span>
+          </button>
+        </div>
+
+        <div id="fileStatusBox" class="hidden rounded-xl bg-slate-900/90 border border-slate-700 p-4 text-xs space-y-1">
+          <div id="fileStatusText" class="font-bold text-emerald-400"></div>
+          <div id="fileStatusDetails" class="text-slate-400"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: Key & Password Generator -->
+    <section id="secKeygen" class="glass-card rounded-2xl p-6 space-y-5 hidden">
+      <div class="border-b border-slate-700/60 pb-4">
+        <h2 class="text-lg font-bold text-white">مولد المفاتيح وكلمات المرور التشفيرية (CSPRNG)</h2>
+        <p class="text-xs text-slate-400">يعتمد على مولد الأرقام العشوائية الآمن تشفيرياً <code class="text-emerald-400">crypto.getRandomValues</code></p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="bg-slate-950 border border-slate-700 rounded-xl p-4 flex items-center justify-between gap-3">
+          <input id="generatedKeyOutput" type="text" readonly class="w-full bg-transparent text-emerald-400 font-bold text-base mono-box focus:outline-none" value="" />
+          <div class="flex gap-2 shrink-0">
+            <button id="btnCopyGenKey" type="button" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white">
+              نسخ
+            </button>
+            <button id="btnUseGenKey" type="button" class="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white">
+              استخدام في التشفير
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+          <div>
+            <div class="flex justify-between text-sm font-bold mb-2">
+              <span>طول المفتاح:</span>
+              <span id="keyLenLabel" class="text-emerald-400">24 حرفاً</span>
+            </div>
+            <input id="keyLenSlider" type="range" min="12" max="64" value="24" class="w-full accent-emerald-500 cursor-pointer" />
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="chkUpper" type="checkbox" checked class="accent-emerald-500 w-4 h-4" />
+              <span>أحرف كبيرة (A-Z)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="chkLower" type="checkbox" checked class="accent-emerald-500 w-4 h-4" />
+              <span>أحرف صغيرة (a-z)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="chkDigits" type="checkbox" checked class="accent-emerald-500 w-4 h-4" />
+              <span>أرقام (0-9)</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input id="chkSymbols" type="checkbox" checked class="accent-emerald-500 w-4 h-4" />
+              <span>رموز خاصة (!@#$)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between bg-slate-900/80 px-4 py-3 rounded-xl border border-slate-800 text-xs">
+          <span>قوة الإنتروبيا التشفيرية (Entropy):</span>
+          <strong id="entropyValue" class="text-emerald-400 text-sm">157.3 بت (ممتاز جداً)</strong>
+        </div>
+
+        <button id="btnRegenerateKey" type="button" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition">
+          🔄 توليد مفتاح عشوائي جديد
+        </button>
+      </div>
+    </section>
+
+    <!-- SECTION 4: Hash & Integrity Checker -->
+    <section id="secHash" class="glass-card rounded-2xl p-6 space-y-5 hidden">
+      <div class="border-b border-slate-700/60 pb-4">
+        <h2 class="text-lg font-bold text-white">البصمة الرقمية وفحص سلامة البيانات (SHA-256 / SHA-512)</h2>
+        <p class="text-xs text-slate-400">تحقق من عدم تعرض نصوصك أو بياناتك لأي تعديل أو تلاعب عبر حساب البصمة التشفيرية</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label for="hashInput" class="block text-sm font-bold text-slate-200 mb-1.5">النص المراد استخراج بصمته الرقمية:</label>
+          <textarea id="hashInput" rows="3" placeholder="أدخل أي نص لحساب بصمة SHA-256 و SHA-512 فورا..." class="w-full rounded-xl bg-slate-900/90 border border-slate-700 p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"></textarea>
+        </div>
+
+        <div class="space-y-3">
+          <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-400">بصمة SHA-256:</span>
+              <button id="btnCopySha256" type="button" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded">نسخ</button>
+            </div>
+            <div id="outSha256" class="text-xs text-slate-300 mono-box break-all select-all">—</div>
+          </div>
+
+          <div class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-teal-400">بصمة SHA-512:</span>
+              <button id="btnCopySha512" type="button" class="text-xs text-slate-300 hover:text-white bg-slate-800 px-2.5 py-1 rounded">نسخ</button>
+            </div>
+            <div id="outSha512" class="text-xs text-slate-300 mono-box break-all select-all">—</div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800">
+          <label for="hashCompareInput" class="block text-xs font-bold text-slate-300 mb-1.5">مقارنة بصمة للتحقق من المطابقة (اختياري):</label>
+          <input id="hashCompareInput" type="text" placeholder="الصق بصمة SHA-256 أو SHA-512 للتحقق من التطابق..." class="w-full rounded-xl bg-slate-900/90 border border-slate-700 p-2.5 text-xs text-white mono-box placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+          <p id="hashMatchStatus" class="text-xs mt-1.5 text-slate-400">أدخل نصاً وبصمة للمقارنة الفورية.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: Fedora Linux Native Support & CLI Generator -->
+    <section id="secFedora" class="glass-card rounded-2xl p-6 space-y-5 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>🐧</span>
+            <span>دعم نظام فيدورا لينكس (Fedora Linux CLI & Desktop)</span>
+          </h2>
+          <p class="text-xs text-slate-400">تعمل هذه الواجهة مباشرة على متصفحات Fedora (Firefox / Chromium)، ويمكنك تنزيل أداة طرفية (CLI) متوافقة 100% مع ملفات <code class="text-emerald-400">.vault</code></p>
+        </div>
+        <span class="text-xs bg-sky-950/80 border border-sky-600/50 text-sky-300 px-3 py-1.5 rounded-lg font-bold self-start sm:self-auto">
+          Fedora 39 / 40 / 41+ (DNF)
+        </span>
+      </div>
+
+      <!-- Download Native Fedora Scripts -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button id="btnDlFedoraPy" type="button" class="p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex flex-col items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/40">
+          <span class="text-lg">🐍</span>
+          <span>تنزيل أداة الطرفية (fedora-vault.py)</span>
+          <span class="text-[11px] text-emerald-100 font-normal">متوافقة مع AES-256-GCM</span>
+        </button>
+        <button id="btnDlFedoraSh" type="button" class="p-3.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition flex flex-col items-center justify-center gap-1.5 shadow-lg shadow-sky-950/40">
+          <span class="text-lg">⚙️</span>
+          <span>تنزيل مثبت فيدورا (install-fedora.sh)</span>
+          <span class="text-[11px] text-sky-100 font-normal">يثبت الحزم عبر dnf ويضيف الأمر</span>
+        </button>
+        <button id="btnDlDesktopFile" type="button" class="p-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-xs transition flex flex-col items-center justify-center gap-1.5">
+          <span class="text-lg">🖥️</span>
+          <span>تنزيل اختصار سطح المكتب (.desktop)</span>
+          <span class="text-[11px] text-slate-400 font-normal">لبيئة GNOME و KDE Plasma</span>
+        </button>
+      </div>
+
+      <!-- Interactive Fedora Command Builder -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-4">
+        <h3 class="text-sm font-bold text-emerald-400">مولد أوامر طرفية فيدورا التفاعلي (Fedora Terminal Builder):</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="fedTaskSelect" class="block text-xs font-bold text-slate-300 mb-1">اختر العملية المطلوبة في فيدورا:</label>
+            <select id="fedTaskSelect" class="w-full rounded-xl bg-slate-950 border border-slate-700 p-2.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+              <option value="install">1. تثبيت المتطلبات على فيدورا (sudo dnf install)</option>
+              <option value="enc_file">2. تشفير ملف عبر الطرفية (fedora-vault.py enc-file)</option>
+              <option value="dec_file">3. فك تشفير ملف .vault عبر الطرفية (fedora-vault.py dec-file)</option>
+              <option value="enc_text">4. تشفير نص سري مباشرة من الطرفية</option>
+              <option value="luks">5. إنشاء قرص/حاوية مشفرة أصلية في فيدورا (LUKS / cryptsetup)</option>
+            </select>
+          </div>
+          <div>
+            <label for="fedTargetInput" class="block text-xs font-bold text-slate-300 mb-1">اسم الملف أو النص المستهدف:</label>
+            <input id="fedTargetInput" type="text" value="secret_project.tar.gz" placeholder="مثال: document.pdf" class="w-full rounded-xl bg-slate-950 border border-slate-700 p-2.5 text-xs text-white mono-box focus:outline-none focus:border-emerald-500" />
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300">الأمر الجاهز للتنفيذ في طرفية Fedora (Bash):</span>
+            <button id="btnCopyFedoraCmd" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 px-3 py-1 rounded-lg">
+              📋 نسخ الأمر
+            </button>
+          </div>
+          <pre id="fedoraCmdBox" class="w-full rounded-xl bg-slate-950 border border-emerald-500/40 p-3.5 text-xs text-emerald-300 mono-box overflow-x-auto whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+
+      <!-- Preview of Python Script -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300">كود أداة الطرفية لنظام فيدورا (<code class="text-emerald-400">fedora-vault.py</code>):</span>
+          <button id="btnCopyFedoraPy" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1 rounded-lg border border-slate-700">
+            📋 نسخ الكود بالكامل
+          </button>
+        </div>
+        <textarea id="fedoraPyCode" readonly rows="7" class="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs text-slate-300 mono-box focus:outline-none"></textarea>
+      </div>
+    </section>
+
+    <!-- SECTION 6: Open Source (FOSS) Package & License Generator -->
+    <section id="secOpenSource" class="glass-card rounded-2xl p-6 space-y-5 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>🌍</span>
+            <span>مشروع مفتوح المصدر بالكامل (Free & Open Source Software)</span>
+          </h2>
+          <p class="text-xs text-slate-400">شفافية كاملة للكود المصدري بدون أي مكتبات مغلقة أو تتبع، جاهز للنشر على GitHub أو GitLab</p>
+        </div>
+        <span class="text-xs bg-emerald-950/80 border border-emerald-600/50 text-emerald-300 px-3 py-1.5 rounded-lg font-bold self-start sm:self-auto">
+          SPDX: MIT / GPL-3.0
+        </span>
+      </div>
+
+      <!-- Open Source Audit Guarantees -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+        <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl space-y-1">
+          <div class="font-bold text-emerald-400">🔍 قابل للتدقيق الأمني (Auditable)</div>
+          <p class="text-slate-400">كود مصدري واضح ومقروء بالكامل دون تشويش (No Obfuscation) يعتمد على واجهات قياسية مفتوحة.</p>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl space-y-1">
+          <div class="font-bold text-emerald-400">🚫 صفر اتصالات خارجية (Zero Telemetry)</div>
+          <p class="text-slate-400">لا توجد أي خوادم خلفية أو تحليلات؛ تتم جميع العمليات داخل ذاكرة جهازك فقط.</p>
+        </div>
+        <div class="bg-slate-900/80 border border-slate-800 p-3.5 rounded-xl space-y-1">
+          <div class="font-bold text-emerald-400">⚖️ حرية التعديل والتوزيع (FOSS)</div>
+          <p class="text-slate-400">مرخص برخصة MIT / GPLv3 مما يمنحك الحق الكامل في استخدامه وتعديله ومشاركته في مشروعك.</p>
+        </div>
+      </div>
+
+      <!-- Download Open Source Repo Files -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <button id="btnDlReadme" type="button" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+          <span>📄</span>
+          <span>تنزيل README.md</span>
+        </button>
+        <button id="btnDlLicense" type="button" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+          <span>⚖️</span>
+          <span>تنزيل LICENSE</span>
+        </button>
+        <button id="btnDlHtmlSrc" type="button" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+          <span>💻</span>
+          <span>تنزيل الكود المصدري (.html)</span>
+        </button>
+        <button id="btnCopyGitInit" type="button" class="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-emerald-400 font-bold text-xs transition flex items-center justify-center gap-1.5">
+          <span>🌿</span>
+          <span>نسخ أوامر النشر لـ Git</span>
+        </button>
+      </div>
+
+      <!-- File Viewer Switcher -->
+      <div class="space-y-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <label for="ossFileSelect" class="text-xs font-bold text-slate-300">استعراض ملفات المستودع مفتوح المصدر:</label>
+            <select id="ossFileSelect" class="rounded-lg bg-slate-900 border border-slate-700 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+              <option value="readme">README.md (توثيق المشروع والمواصفات)</option>
+              <option value="mit">LICENSE (رخصة MIT مفتوحة المصدر)</option>
+              <option value="gpl">COPYING (رخصة GNU GPLv3 الحرة)</option>
+              <option value="spec">SPECIFICATION.md (المواصفات التشفيرية لملفات .vault)</option>
+            </select>
+          </div>
+          <button id="btnCopyOssDoc" type="button" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 self-start sm:self-auto">
+            📋 نسخ محتوى الملف
+          </button>
+        </div>
+        <textarea id="ossDocPreview" readonly rows="9" class="w-full rounded-xl bg-slate-950 border border-slate-800 p-3.5 text-xs text-slate-300 mono-box focus:outline-none"></textarea>
+      </div>
+    </section>
+  </div>
+
+  <footer class="max-w-4xl w-full mx-auto mt-8 text-center text-xs text-slate-500 py-3">
+    يعمل التطبيق بالكامل محلياً عبر معيار التشفير القياسي Web Crypto API (AES-256-GCM & PBKDF2) لحماية خصوصيتك.
+  </footer>
+
+  <script>
+    // Toast Helper
+    let toastTimer = null;
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toastIcon');
+      const msg = document.getElementById('toastMsg');
+      toast.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-2xl text-sm font-bold transition-all duration-300 flex items-center gap-2 ' +
+        (isError ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white');
+      icon.textContent = isError ? '⚠️' : '✅';
+      msg.textContent = message;
+      toast.classList.remove('hidden');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3200);
+    }
+
+    // Clipboard Helper (Canvas-safe)
+    function copyTextToClipboard(text, label) {
+      if (!text || text === '—') {
+        showToast('لا يوجد نص لنسخه حالياً', true);
+        return;
+      }
+      const fallbackCopy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          showToast('تم نسخ ' + label + ' بنجاح');
+        } catch (err) {
+          showToast('تعذر النسخ التلقائي', true);
+        }
+        document.body.removeChild(ta);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('تم نسخ ' + label + ' بنجاح');
+        }).catch(fallbackCopy);
+      } else {
+        fallbackCopy();
+      }
+    }
+
+    // Tab Navigation
+    const tabs = [
+      { btn: 'tabBtnText', sec: 'secText' },
+      { btn: 'tabBtnFile', sec: 'secFile' },
+      { btn: 'tabBtnKeygen', sec: 'secKeygen' },
+      { btn: 'tabBtnHash', sec: 'secHash' },
+      { btn: 'tabBtnFedora', sec: 'secFedora' },
+      { btn: 'tabBtnOpenSource', sec: 'secOpenSource' }
+    ];
+
+    tabs.forEach(item => {
+      document.getElementById(item.btn).addEventListener('click', () => {
+        tabs.forEach(t => {
+          const b = document.getElementById(t.btn);
+          const s = document.getElementById(t.sec);
+          if (t.btn === item.btn) {
+            b.classList.add('tab-active');
+            b.classList.remove('text-slate-300');
+            s.classList.remove('hidden');
+          } else {
+            b.classList.remove('tab-active');
+            b.classList.add('text-slate-300');
+            s.classList.add('hidden');
+          }
+        });
+      });
+    });
+
+    // Web Crypto Helpers (PBKDF2 + AES-256-GCM)
+    const PBKDF2_ITERATIONS = 100000;
+
+    async function deriveKey(password, saltBuffer) {
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      return crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: saltBuffer,
+          iterations: PBKDF2_ITERATIONS,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    function uint8ToBase64(bytes) {
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      return btoa(binary);
+    }
+
+    function base64ToUint8(base64Str) {
+      const binary = atob(base64Str.trim());
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    async function encryptBytes(plainUint8, password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(password, salt);
+      const cipherBuffer = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        plainUint8
+      );
+      const cipherBytes = new Uint8Array(cipherBuffer);
+      const combined = new Uint8Array(16 + 12 + cipherBytes.length);
+      combined.set(salt, 0);
+      combined.set(iv, 16);
+      combined.set(cipherBytes, 28);
+      return combined;
+    }
+
+    async function decryptBytes(combinedUint8, password) {
+      if (combinedUint8.length < 29) {
+        throw new Error('بيانات مشفرة غير صالحة أو ناقصة');
+      }
+      const salt = combinedUint8.slice(0, 16);
+      const iv = combinedUint8.slice(16, 28);
+      const cipherBytes = combinedUint8.slice(28);
+      const key = await deriveKey(password, salt);
+      const plainBuffer = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        cipherBytes
+      );
+      return new Uint8Array(plainBuffer);
+    }
+
+    // Text Encryption / Decryption State
+    let isTextEncryptMode = true;
+    const modeEncBtn = document.getElementById('modeEncBtn');
+    const modeDecBtn = document.getElementById('modeDecBtn');
+    const lblTextInput = document.getElementById('lblTextInput');
+    const txtInput = document.getElementById('txtInput');
+    const btnProcessTextIcon = document.getElementById('btnProcessTextIcon');
+    const btnProcessTextLabel = document.getElementById('btnProcessTextLabel');
+    const lblTextOutput = document.getElementById('lblTextOutput');
+    const textOutputContainer = document.getElementById('textOutputContainer');
+    const txtOutput = document.getElementById('txtOutput');
+
+    function setMode(encryptMode) {
+      isTextEncryptMode = encryptMode;
+      if (encryptMode) {
+        modeEncBtn.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-emerald-600 text-white shadow-lg shadow-emerald-900/30 transition';
+        modeDecBtn.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+        lblTextInput.textContent = 'النص المراد تشفيره:';
+        txtInput.placeholder = 'اكتب أو الصق بياناتك السرية هنا...';
+        btnProcessTextIcon.textContent = '🔒';
+        btnProcessTextLabel.textContent = 'تنفيذ التشفير الآن (AES-256)';
+        lblTextOutput.textContent = 'النتيجة المشفرة (Base64):';
+      } else {
+        modeDecBtn.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-indigo-600 text-white shadow-lg shadow-indigo-900/30 transition';
+        modeEncBtn.className = 'flex-1 py-2.5 rounded-xl font-bold text-sm bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+        lblTextInput.textContent = 'النص المشفر (Base64) المراد فك تشفيره:';
+        txtInput.placeholder = 'الصق الكود المشفر بصيغة Base64 هنا...';
+        btnProcessTextIcon.textContent = '🔓';
+        btnProcessTextLabel.textContent = 'فك التشفير واسترجاع النص الأصلي';
+        lblTextOutput.textContent = 'النص الأصلي بعد فك التشفير:';
+      }
+      textOutputContainer.classList.add('hidden');
+    }
+
+    modeEncBtn.addEventListener('click', () => setMode(true));
+    modeDecBtn.addEventListener('click', () => setMode(false));
+
+    // Password Strength Meter
+    const txtPassword = document.getElementById('txtPassword');
+    const pwdStrengthBar = document.getElementById('pwdStrengthBar');
+    const pwdStrengthLabel = document.getElementById('pwdStrengthLabel');
+
+    function updatePasswordStrength(pwd) {
+      if (!pwd) {
+        pwdStrengthBar.style.width = '0%';
+        pwdStrengthLabel.textContent = 'غير محدد';
+        return;
+      }
+      let score = 0;
+      if (pwd.length >= 8) score += 25;
+      if (pwd.length >= 14) score += 25;
+      if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score += 20;
+      if (/\d/.test(pwd)) score += 15;
+      if (/[^A-Za-z0-9]/.test(pwd)) score += 15;
+
+      pwdStrengthBar.style.width = Math.min(100, score) + '%';
+      if (score < 45) {
+        pwdStrengthBar.className = 'h-full bg-red-500 transition-all duration-300';
+        pwdStrengthLabel.textContent = 'ضعيف';
+      } else if (score < 75) {
+        pwdStrengthBar.className = 'h-full bg-amber-400 transition-all duration-300';
+        pwdStrengthLabel.textContent = 'متوسط';
+      } else {
+        pwdStrengthBar.className = 'h-full bg-emerald-400 transition-all duration-300';
+        pwdStrengthLabel.textContent = 'قوي جداً';
+      }
+    }
+
+    txtPassword.addEventListener('input', (e) => updatePasswordStrength(e.target.value));
+
+    document.getElementById('btnTogglePwd').addEventListener('click', (e) => {
+      const isPwd = txtPassword.type === 'password';
+      txtPassword.type = isPwd ? 'text' : 'password';
+      e.target.textContent = isPwd ? 'إخفاء' : 'إظهار';
+    });
+
+    // Generate Strong Key Helper
+    function generateStrongKeyString(len = 24, upper = true, lower = true, digits = true, symbols = true) {
+      let chars = '';
+      if (upper) chars += 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      if (lower) chars += 'abcdefghijkmnopqrstuvwxyz';
+      if (digits) chars += '23456789';
+      if (symbols) chars += '!@#$%^&*()-_=+[]{}';
+      if (!chars) chars = 'abcdefghijkmnopqrstuvwxyz23456789';
+      const rand = new Uint32Array(len);
+      crypto.getRandomValues(rand);
+      let out = '';
+      for (let i = 0; i < len; i++) {
+        out += chars[rand[i] % chars.length];
+      }
+      return out;
+    }
+
+    document.getElementById('btnAutoFillKey').addEventListener('click', () => {
+      const k = generateStrongKeyString(20, true, true, true, true);
+      txtPassword.value = k;
+      txtPassword.type = 'text';
+      document.getElementById('btnTogglePwd').textContent = 'إخفاء';
+      updatePasswordStrength(k);
+      showToast('تم توليد مفتاح عشوائي قوي؛ احتفظ به في مكان آمن');
+    });
+
+    document.getElementById('btnDemoText').addEventListener('click', () => {
+      setMode(true);
+      txtInput.value = 'بيانات المشروع السرية: رقم الحساب #994821 - مفتاح الخادم الداخلي: SRV-KSA-2026';
+      if (!txtPassword.value) {
+        const k = generateStrongKeyString(18, true, true, true, true);
+        txtPassword.value = k;
+        updatePasswordStrength(k);
+      }
+      showToast('تم إدراج نص تجريبي ومفتاح تشفير');
+    });
+
+    document.getElementById('btnClearText').addEventListener('click', () => {
+      txtInput.value = '';
+      txtOutput.value = '';
+      textOutputContainer.classList.add('hidden');
+    });
+
+    document.getElementById('btnProcessText').addEventListener('click', async () => {
+      const inputVal = txtInput.value.trim();
+      const pwd = txtPassword.value;
+      if (!inputVal) {
+        showToast('يرجى إدخال النص أولاً', true);
+        return;
+      }
+      if (!pwd) {
+        showToast('يرجى إدخال كلمة المرور السرية', true);
+        return;
+      }
+
+      try {
+        if (isTextEncryptMode) {
+          const enc = new TextEncoder();
+          const encryptedBytes = await encryptBytes(enc.encode(inputVal), pwd);
+          const b64 = uint8ToBase64(encryptedBytes);
+          txtOutput.value = b64;
+          txtOutput.classList.add('mono-box');
+          textOutputContainer.classList.remove('hidden');
+          showToast('تم تشفير النص بنجاح بمعيار AES-256-GCM');
+        } else {
+          const rawBytes = base64ToUint8(inputVal);
+          const decryptedBytes = await decryptBytes(rawBytes, pwd);
+          const dec = new TextDecoder();
+          txtOutput.value = dec.decode(decryptedBytes);
+          txtOutput.classList.remove('mono-box');
+          textOutputContainer.classList.remove('hidden');
+          showToast('تم فك التشفير واسترجاع النص بنجاح');
+        }
+      } catch (err) {
+        showToast('فشلت العملية: تأكد من صحة كلمة المرور أو النص المشفر', true);
+      }
+    });
+
+    document.getElementById('btnCopyOutput').addEventListener('click', () => {
+      copyTextToClipboard(txtOutput.value, 'النتيجة');
+    });
+
+    document.getElementById('btnDownloadTxt').addEventListener('click', () => {
+      if (!txtOutput.value) return;
+      const blob = new Blob([txtOutput.value], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = isTextEncryptMode ? 'encrypted-message.txt' : 'decrypted-message.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('تم حفظ الملف بنجاح');
+    });
+
+    // SECTION 2: File Encryption & Decryption
+    let selectedFile = null;
+    const fileInput = document.getElementById('fileInput');
+    const fileDropTitle = document.getElementById('fileDropTitle');
+    const fileDropSub = document.getElementById('fileDropSub');
+    const fileStatusBox = document.getElementById('fileStatusBox');
+    const fileStatusText = document.getElementById('fileStatusText');
+    const fileStatusDetails = document.getElementById('fileStatusDetails');
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        selectedFile = e.target.files[0];
+        fileDropTitle.textContent = 'الملف المحدد: ' + selectedFile.name;
+        fileDropSub.textContent = 'الحجم: ' + (selectedFile.size / 1024).toFixed(2) + ' كيلوبايت';
+        fileStatusBox.classList.add('hidden');
+      }
+    });
+
+    function triggerDownloadBlob(uint8Array, filename) {
+      const blob = new Blob([uint8Array], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('btnEncryptFile').addEventListener('click', async () => {
+      const pwd = document.getElementById('filePassword').value;
+      if (!selectedFile) {
+        showToast('يرجى اختيار ملف أولاً', true);
+        return;
+      }
+      if (!pwd) {
+        showToast('يرجى إدخال كلمة مرور لتشفير الملف', true);
+        return;
+      }
+      try {
+        const arrayBuf = await selectedFile.arrayBuffer();
+        const encrypted = await encryptBytes(new Uint8Array(arrayBuf), pwd);
+        const outName = selectedFile.name + '.vault';
+        triggerDownloadBlob(encrypted, outName);
+        fileStatusBox.classList.remove('hidden');
+        fileStatusText.textContent = '✅ تم تشفير الملف بنجاح: ' + outName;
+        fileStatusDetails.textContent = 'تم تضمين Salt (16B) + IV (12B) + AES-256-GCM Auth Tag لحماية الملف من أي تلاعب.';
+        showToast('تم تشفير الملف وتنزيله');
+      } catch (err) {
+        showToast('حدث خطأ أثناء تشفير الملف', true);
+      }
+    });
+
+    document.getElementById('btnDecryptFile').addEventListener('click', async () => {
+      const pwd = document.getElementById('filePassword').value;
+      if (!selectedFile) {
+        showToast('يرجى اختيار الملف المشفر أولاً', true);
+        return;
+      }
+      if (!pwd) {
+        showToast('يرجى إدخال كلمة مرور فك التشفير', true);
+        return;
+      }
+      try {
+        const arrayBuf = await selectedFile.arrayBuffer();
+        const decrypted = await decryptBytes(new Uint8Array(arrayBuf), pwd);
+        const origName = selectedFile.name.endsWith('.vault')
+          ? selectedFile.name.slice(0, -6)
+          : 'decrypted_' + selectedFile.name;
+        triggerDownloadBlob(decrypted, origName);
+        fileStatusBox.classList.remove('hidden');
+        fileStatusText.textContent = '✅ تم فك تشفير الملف واستعادته: ' + origName;
+        fileStatusDetails.textContent = 'تم التحقق من سلامة البيانات وبصمة التوثيق GCM بنجاح.';
+        showToast('تم فك تشفير الملف وتنزيله');
+      } catch (err) {
+        showToast('تعذر فك تشفير الملف: كلمة المرور خاطئة أو الملف غير صالح', true);
+      }
+    });
+
+    // SECTION 3: Key Generator
+    const keyLenSlider = document.getElementById('keyLenSlider');
+    const keyLenLabel = document.getElementById('keyLenLabel');
+    const generatedKeyOutput = document.getElementById('generatedKeyOutput');
+    const entropyValue = document.getElementById('entropyValue');
+    const chkUpper = document.getElementById('chkUpper');
+    const chkLower = document.getElementById('chkLower');
+    const chkDigits = document.getElementById('chkDigits');
+    const chkSymbols = document.getElementById('chkSymbols');
+
+    function refreshGeneratedKey() {
+      const len = parseInt(keyLenSlider.value, 10);
+      keyLenLabel.textContent = len + ' حرفاً';
+      const u = chkUpper.checked;
+      const l = chkLower.checked;
+      const d = chkDigits.checked;
+      const s = chkSymbols.checked;
+      const key = generateStrongKeyString(len, u, l, d, s);
+      generatedKeyOutput.value = key;
+
+      let pool = 0;
+      if (u) pool += 24;
+      if (l) pool += 25;
+      if (d) pool += 8;
+      if (s) pool += 18;
+      if (pool === 0) pool = 33;
+      const bits = (len * Math.log2(pool)).toFixed(1);
+      entropyValue.textContent = bits + ' بت (' + (bits >= 128 ? 'آمن عسكرياً' : 'قوي') + ')';
+    }
+
+    keyLenSlider.addEventListener('input', refreshGeneratedKey);
+    [chkUpper, chkLower, chkDigits, chkSymbols].forEach(el => el.addEventListener('change', refreshGeneratedKey));
+    document.getElementById('btnRegenerateKey').addEventListener('click', refreshGeneratedKey);
+    document.getElementById('btnCopyGenKey').addEventListener('click', () => {
+      copyTextToClipboard(generatedKeyOutput.value, 'المفتاح المولد');
+    });
+    document.getElementById('btnUseGenKey').addEventListener('click', () => {
+      txtPassword.value = generatedKeyOutput.value;
+      document.getElementById('filePassword').value = generatedKeyOutput.value;
+      updatePasswordStrength(generatedKeyOutput.value);
+      document.getElementById('tabBtnText').click();
+      showToast('تم تعيين المفتاح في حقول التشفير');
+    });
+
+    // SECTION 4: Hash & Integrity Checker
+    const hashInput = document.getElementById('hashInput');
+    const outSha256 = document.getElementById('outSha256');
+    const outSha512 = document.getElementById('outSha512');
+    const hashCompareInput = document.getElementById('hashCompareInput');
+    const hashMatchStatus = document.getElementById('hashMatchStatus');
+
+    async function computeHexHash(algo, text) {
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest(algo, enc.encode(text));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function updateHashes() {
+      const val = hashInput.value;
+      if (!val) {
+        outSha256.textContent = '—';
+        outSha512.textContent = '—';
+        checkHashComparison();
+        return;
+      }
+      const [h256, h512] = await Promise.all([
+        computeHexHash('SHA-256', val),
+        computeHexHash('SHA-512', val)
+      ]);
+      outSha256.textContent = h256;
+      outSha512.textContent = h512;
+      checkHashComparison();
+    }
+
+    function checkHashComparison() {
+      const cmp = hashCompareInput.value.trim().toLowerCase();
+      if (!cmp) {
+        hashMatchStatus.textContent = 'أدخل نصاً وبصمة للمقارنة الفورية.';
+        hashMatchStatus.className = 'text-xs mt-1.5 text-slate-400';
+        return;
+      }
+      const s256 = outSha256.textContent.toLowerCase();
+      const s512 = outSha512.textContent.toLowerCase();
+      if (cmp === s256 || cmp === s512) {
+        hashMatchStatus.textContent = '✅ البصمة متطابقة تماماً! البيانات سليمة ولم تتعرض لأي تعديل.';
+        hashMatchStatus.className = 'text-xs mt-1.5 text-emerald-400 font-bold';
+      } else {
+        hashMatchStatus.textContent = '❌ البصمة غير متطابقة! قد تكون البيانات مختلفة أو تم التعديل عليها.';
+        hashMatchStatus.className = 'text-xs mt-1.5 text-red-400 font-bold';
+      }
+    }
+
+    hashInput.addEventListener('input', updateHashes);
+    hashCompareInput.addEventListener('input', checkHashComparison);
+
+    document.getElementById('btnCopySha256').addEventListener('click', () => {
+      copyTextToClipboard(outSha256.textContent, 'بصمة SHA-256');
+    });
+    document.getElementById('btnCopySha512').addEventListener('click', () => {
+      copyTextToClipboard(outSha512.textContent, 'بصمة SHA-512');
+    });
+
+    // SECTION 5: Fedora Linux CLI Support
+    const FEDORA_PY_SCRIPT = [
+      "#!/usr/bin/env python3",
+      "# -*- coding: utf-8 -*-",
+      "# درع البيانات (Data Shield) - أداة تشفير وفك تشفير متوافقة مع فيدورا لينكس (Fedora Linux)",
+      "# تستخدم نفس معيار تطبيق الويب: AES-256-GCM + PBKDF2-HMAC-SHA256 (100,000 iterations)",
+      "# تثبيت المتطلبات على فيدورا: sudo dnf install -y python3 python3-cryptography",
+      "import sys",
+      "import os",
+      "import base64",
+      "import getpass",
+      "from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC",
+      "from cryptography.hazmat.primitives import hashes",
+      "from cryptography.hazmat.primitives.ciphers.aead import AESGCM",
+      "",
+      "ITERATIONS = 100000",
+      "",
+      "def derive_key(password: str, salt: bytes) -> bytes:",
+      "    kdf = PBKDF2HMAC(",
+      "        algorithm=hashes.SHA256(),",
+      "        length=32,",
+      "        salt=salt,",
+      "        iterations=ITERATIONS,",
+      "    )",
+      "    return kdf.derive(password.encode('utf-8'))",
+      "",
+      "def encrypt_bytes(data: bytes, password: str) -> bytes:",
+      "    salt = os.urandom(16)",
+      "    iv = os.urandom(12)",
+      "    key = derive_key(password, salt)",
+      "    aesgcm = AESGCM(key)",
+      "    ct = aesgcm.encrypt(iv, data, None)",
+      "    return salt + iv + ct",
+      "",
+      "def decrypt_bytes(payload: bytes, password: str) -> bytes:",
+      "    if len(payload) < 29:",
+      "        raise ValueError('البيانات المشفرة غير صالحة أو قصيرة جداً')",
+      "    salt = payload[:16]",
+      "    iv = payload[16:28]",
+      "    ct = payload[28:]",
+      "    key = derive_key(password, salt)",
+      "    aesgcm = AESGCM(key)",
+      "    return aesgcm.decrypt(iv, ct, None)",
+      "",
+      "def main():",
+      "    if len(sys.argv) < 3:",
+      "        print('الاستخدام على Fedora Linux:')",
+      "        print('  تشفير ملف : python3 fedora-vault.py enc-file <path>')",
+      "        print('  فك ملف    : python3 fedora-vault.py dec-file <path.vault>')",
+      "        print('  تشفير نص  : python3 fedora-vault.py enc-text \"النص السري\"')",
+      "        print('  فك نص     : python3 fedora-vault.py dec-text \"<Base64>\"')",
+      "        sys.exit(1)",
+      "",
+      "    mode = sys.argv[1]",
+      "    target = sys.argv[2]",
+      "    pwd = getpass.getpass('أدخل مفتاح التشفير السري (كلمة المرور): ')",
+      "",
+      "    try:",
+      "        if mode == 'enc-file':",
+      "            with open(target, 'rb') as f:",
+      "                raw = f.read()",
+      "            out_path = target + '.vault'",
+      "            with open(out_path, 'wb') as f:",
+      "                f.write(encrypt_bytes(raw, pwd))",
+      "            print('[+] تم تشفير الملف بنجاح:', out_path)",
+      "        elif mode == 'dec-file':",
+      "            with open(target, 'rb') as f:",
+      "                raw = f.read()",
+      "            out_path = target[:-6] if target.endswith('.vault') else 'decrypted_' + os.path.basename(target)",
+      "            with open(out_path, 'wb') as f:",
+      "                f.write(decrypt_bytes(raw, pwd))",
+      "            print('[+] تم فك تشفير الملف واستعادته:', out_path)",
+      "        elif mode == 'enc-text':",
+      "            b64 = base64.b64encode(encrypt_bytes(target.encode('utf-8'), pwd)).decode('ascii')",
+      "            print('[+] النص المشفر (Base64):')",
+      "            print(b64)",
+      "        elif mode == 'dec-text':",
+      "            plain = decrypt_bytes(base64.b64decode(target), pwd).decode('utf-8')",
+      "            print('[+] النص الأصلي:')",
+      "            print(plain)",
+      "        else:",
+      "            print('[-] أمر غير معروف:', mode)",
+      "    except Exception as e:",
+      "        print('[-] فشلت العملية: تأكد من صحة كلمة المرور أو سلامة الملف.', e)",
+      "        sys.exit(2)",
+      "",
+      "if __name__ == '__main__':",
+      "    main()"
+    ].join('\n');
+
+    const FEDORA_SH_SCRIPT = [
+      "#!/usr/bin/env bash",
+      "set -e",
+      "echo '[*] جاري تثبيت متطلبات التشفير على نظام Fedora Linux...'",
+      "sudo dnf install -y python3 python3-cryptography",
+      "chmod +x fedora-vault.py",
+      "sudo cp fedora-vault.py /usr/local/bin/fedora-vault",
+      "echo '[+] تم التثبيت بنجاح! يمكنك الآن استخدام الأمر: fedora-vault'"
+    ].join('\n');
+
+    const FEDORA_DESKTOP_ENTRY = [
+      "[Desktop Entry]",
+      "Version=1.0",
+      "Type=Application",
+      "Name=Data Shield Vault (درع البيانات)",
+      "Comment=AES-256-GCM Local Data Encryption Tool on Fedora Linux",
+      "Exec=xdg-open ./data_encryption_vault.html",
+      "Icon=security-high",
+      "Terminal=false",
+      "Categories=Security;Utility;"
+    ].join('\n');
+
+    const fedoraPyCode = document.getElementById('fedoraPyCode');
+    const fedTaskSelect = document.getElementById('fedTaskSelect');
+    const fedTargetInput = document.getElementById('fedTargetInput');
+    const fedoraCmdBox = document.getElementById('fedoraCmdBox');
+
+    fedoraPyCode.value = FEDORA_PY_SCRIPT;
+
+    function updateFedoraCommand() {
+      const task = fedTaskSelect.value;
+      const target = (fedTargetInput.value || 'secret_file.pdf').trim();
+      if (task === 'install') {
+        fedoraCmdBox.textContent = 'sudo dnf install -y python3 python3-cryptography && chmod +x fedora-vault.py';
+      } else if (task === 'enc_file') {
+        fedoraCmdBox.textContent = 'python3 fedora-vault.py enc-file "' + target + '"';
+      } else if (task === 'dec_file') {
+        const vName = target.endsWith('.vault') ? target : target + '.vault';
+        fedoraCmdBox.textContent = 'python3 fedora-vault.py dec-file "' + vName + '"';
+      } else if (task === 'enc_text') {
+        fedoraCmdBox.textContent = 'python3 fedora-vault.py enc-text "' + target + '"';
+      } else if (task === 'luks') {
+        fedoraCmdBox.textContent = [
+          '# إنشاء حاوية مشفرة بمعيار LUKS2 في فيدورا لينكس (بحجم 500 ميجابايت):',
+          'dd if=/dev/zero of=fedora_vault.img bs=1M count=500',
+          'sudo cryptsetup luksFormat fedora_vault.img',
+          'sudo cryptsetup open fedora_vault.img my_secure_vault',
+          'sudo mkfs.ext4 /dev/mapper/my_secure_vault'
+        ].join('\n');
+      }
+    }
+
+    fedTaskSelect.addEventListener('change', updateFedoraCommand);
+    fedTargetInput.addEventListener('input', updateFedoraCommand);
+
+    function downloadTextFile(content, filename) {
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('btnDlFedoraPy').addEventListener('click', () => {
+      downloadTextFile(FEDORA_PY_SCRIPT, 'fedora-vault.py');
+      showToast('تم تنزيل أداة fedora-vault.py لنظام فيدورا');
+    });
+
+    document.getElementById('btnDlFedoraSh').addEventListener('click', () => {
+      downloadTextFile(FEDORA_SH_SCRIPT, 'install-fedora.sh');
+      showToast('تم تنزيل سكربت التثبيت install-fedora.sh');
+    });
+
+    document.getElementById('btnDlDesktopFile').addEventListener('click', () => {
+      downloadTextFile(FEDORA_DESKTOP_ENTRY, 'data-shield-fedora.desktop');
+      showToast('تم تنزيل ملف اختصار سطح المكتب لـ Fedora');
+    });
+
+    document.getElementById('btnCopyFedoraCmd').addEventListener('click', () => {
+      copyTextToClipboard(fedoraCmdBox.textContent, 'أمر طرفية فيدورا');
+    });
+
+    document.getElementById('btnCopyFedoraPy').addEventListener('click', () => {
+      copyTextToClipboard(FEDORA_PY_SCRIPT, 'كود fedora-vault.py');
+    });
+
+    // SECTION 6: Open Source (FOSS) Documents & Controls
+    const OSS_DOCS = {
+      readme: [
+        "# 🛡️ درع البيانات (Data Shield Vault) - Open Source Encryption Suite",
+        "",
+        "أداة تشفير وحماية بيانات محلية مفتوحة المصدر (FOSS) تعمل بالكامل داخل المتصفح وعلى نظام **Fedora Linux** دون أي اتصال بالخادم.",
+        "",
+        "## ✨ المميزات الرئيسية (Features)",
+        "- **تشفير قياسي معتمد (AES-256-GCM)**: تشفير موثق يحمي السرية ويكتشف أي محاولة تلاعب بالبيانات.",
+        "- **اشتقاق مفاتيح قوي (PBKDF2-HMAC-SHA256)**: باستخدام 100,000 دورة وملح عشوائي (16-byte Salt) لكل عملية.",
+        "- **توافق كامل مع Fedora Linux**: أداة طرفية (`fedora-vault.py`) متوافقة 100% مع صيغة `.vault` والواجهة الرسومية.",
+        "- **مفتوح المصدر بالكامل (MIT License)**: كود مصدري نظيف وقابل للمراجعة الأمنية.",
+        "",
+        "## 🐧 التشغيل على Fedora Linux",
+        "```bash",
+        "sudo dnf install -y python3 python3-cryptography",
+        "chmod +x fedora-vault.py",
+        "python3 fedora-vault.py enc-file secret.pdf",
+        "python3 fedora-vault.py dec-file secret.pdf.vault",
+        "```",
+        "",
+        "## 📐 بنية الملف المشفر (.vault Binary Layout)",
+        "```",
+        "+-------------------+-------------------+-----------------------------------+",
+        "|   Salt (16 Bytes) |   IV (12 Bytes)   | Ciphertext + GCM Auth Tag (16B)   |",
+        "+-------------------+-------------------+-----------------------------------+",
+        "```"
+      ].join('\n'),
+      mit: [
+        "MIT License",
+        "",
+        "Copyright (c) 2026 Data Shield Open Source Project Contributors",
+        "",
+        "Permission is hereby granted, free of charge, to any person obtaining a copy",
+        "of this software and associated documentation files (the \"Software\"), to deal",
+        "in the Software without restriction, including without limitation the rights",
+        "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+        "copies of the Software, and to permit persons to whom the Software is",
+        "furnished to do so, subject to the following conditions:",
+        "",
+        "The above copyright notice and this permission notice shall be included in all",
+        "copies or substantial portions of the Software.",
+        "",
+        "THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR",
+        "IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,",
+        "FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE",
+        "AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER",
+        "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,",
+        "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE",
+        "SOFTWARE."
+      ].join('\n'),
+      gpl: [
+        "GNU GENERAL PUBLIC LICENSE",
+        "Version 3, 29 June 2007",
+        "",
+        "This program is free software: you can redistribute it and/or modify",
+        "it under the terms of the GNU General Public License as published by",
+        "the Free Software Foundation, either version 3 of the License, or",
+        "(at your option) any later version.",
+        "",
+        "This program is distributed in the hope that it will be useful,",
+        "but WITHOUT ANY WARRANTY; without even the implied warranty of",
+        "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the",
+        "GNU General Public License for more details."
+      ].join('\n'),
+      spec: [
+        "# Cryptographic Specification (Data Shield .vault v1)",
+        "",
+        "- **Cipher**: AES-256-GCM (Authenticated Encryption with Associated Data)",
+        "- **Key Derivation Function**: PBKDF2-HMAC-SHA256",
+        "- **Iterations**: 100,000",
+        "- **Key Length**: 256 bits (32 bytes)",
+        "- **Salt Length**: 128 bits (16 bytes, CSPRNG generated per encryption)",
+        "- **IV / Nonce Length**: 96 bits (12 bytes, CSPRNG generated per encryption)",
+        "- **Authentication Tag**: 128 bits (16 bytes appended to ciphertext)",
+        "- **Binary Format**: `Salt[0..15] || IV[16..27] || Ciphertext_and_Tag[28..N]`"
+      ].join('\n')
+    };
+
+    const ossFileSelect = document.getElementById('ossFileSelect');
+    const ossDocPreview = document.getElementById('ossDocPreview');
+
+    function updateOssPreview() {
+      const k = ossFileSelect.value;
+      ossDocPreview.value = OSS_DOCS[k] || OSS_DOCS.readme;
+    }
+
+    ossFileSelect.addEventListener('change', updateOssPreview);
+
+    document.getElementById('btnDlReadme').addEventListener('click', () => {
+      downloadTextFile(OSS_DOCS.readme, 'README.md');
+      showToast('تم تنزيل ملف README.md');
+    });
+
+    document.getElementById('btnDlLicense').addEventListener('click', () => {
+      downloadTextFile(OSS_DOCS.mit, 'LICENSE');
+      showToast('تم تنزيل ملف رخصة المصدر المفتوح LICENSE');
+    });
+
+    document.getElementById('btnDlHtmlSrc').addEventListener('click', () => {
+      const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      downloadTextFile(fullHtml, 'data_encryption_vault.html');
+      showToast('تم تنزيل الكود المصدري الكامل للواجهة');
+    });
+
+    document.getElementById('btnCopyGitInit').addEventListener('click', () => {
+      const gitCmds = [
+        "mkdir data-shield-vault && cd data-shield-vault",
+        "git init",
+        "git add data_encryption_vault.html fedora-vault.py install-fedora.sh README.md LICENSE",
+        "git commit -m 'Initial commit: Open Source AES-256-GCM Data Shield for Web & Fedora Linux'"
+      ].join('\n');
+      copyTextToClipboard(gitCmds, 'أوامر تهيئة مستودع Git');
+    });
+
+    document.getElementById('btnCopyOssDoc').addEventListener('click', () => {
+      copyTextToClipboard(ossDocPreview.value, 'محتوى الملف');
+    });
+
+    // Initialize default key, Fedora command, and Open Source preview on load
+    refreshGeneratedKey();
+    updateFedoraCommand();
+    updateOssPreview();
+  </script>
+</body>
+</html>
